@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGL - Asteroi2</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #000;
+            color: #fff;
+            font-family: 'Press Start 2P', cursive;
+        }
+        .container {
+            text-align: center;
+        }
+        h1 {
+            margin: 20px 0;
+            font-size: 3em;
+            color: #ffcc00;
+        }
+
+        canvas {
+            display: block;
+            border: 2px solid #fff;
+            background-color: #000;
+        }
+    </style>
+    <script type="text/javascript" src="./src/main.js" defer></script>
+</head>
+<body>
+<div class="container">
+    <h1>Astéroi2</h1>
+    <div>
+        <div style="display: flex;justify-content: space-between;padding-bottom: 15px ">
+            <div id="score">Score: 0</div>
+            <div id="niveau">Niveau: 1</div>
+        </div>
+        <canvas id="canvas" width="800" height="600"></canvas>
+    </div>
+</div>
+</body>
+</html>
