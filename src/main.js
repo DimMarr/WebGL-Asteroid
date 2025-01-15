@@ -79,6 +79,7 @@ gl.vertexAttribPointer(positionAttributeLocation, 2, gl.FLOAT, false, 0, 0);
 gl.uniform2f(resolutionUniformLocation, canvas.width, canvas.height);
 
 let ship = { x: canvas.width / 2, y: canvas.height / 2, radius: 20, angle: 0, canShoot: true };
+let fastBullet = false;
 let bullets = [];
 let asteroids = [];
 let stars = [];
@@ -90,23 +91,22 @@ let asteroidColors = [
     [0.3, 0.3, 0.3, 1],
     [0.7, 0.7, 0.7, 1]
 ];
-// Initialiser les étoiles
-for (let i = 0; i < 100; i++) {
-    stars.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        speed: 2 + Math.random() * 3
-    });
-}
-
+let niveau = 1;
 let lives = 3;
 let endGame = false;
 let isBlinking = false;
 let blinkCount = 0;
 
+for (let i = 0; i < 100; i++) {
+    stars.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height
+    });
+}
+
 function drawShip(x, y, radius, angle, color) {
     const shipColor = isBlinking ? [1, 0, 0, 1] : color;
-    const vertices = [
+    const vertices = new Float32Array([
         // Triangle principal
         0, -radius,
         radius / 2, radius,
@@ -122,9 +122,8 @@ function drawShip(x, y, radius, angle, color) {
         -radius / 4, 0,
         radius / 4, 0,
         0, -radius / 2
-    ];
-
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+    ]);
+    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
     gl.uniform4f(colorUniformLocation, shipColor[0], shipColor[1], shipColor[2], shipColor[3]);
     gl.uniform1f(rotationUniformLocation, angle);
     gl.uniform2f(translationUniformLocation, x, y);
@@ -175,7 +174,7 @@ function getRandomColor() {
 }
 
 function drawAsteroid(x, y, radius, color) {
-    const numSegments = 24;
+    const numSegments = 48;
     const angleStep = (Math.PI * 2) / numSegments;
     const vertices = [];
 
@@ -211,25 +210,29 @@ function drawRectangle(x, y, width, height, angle, color) {
     gl.drawArrays(gl.TRIANGLES, 0, 6);
 }
 
-function drawStar(x, y, color) {
-    const vertices = [
-        x, y,
-        x + 2, y,
-        x, y + 2,
-        x, y + 2,
-        x + 2, y,
-        x + 2, y + 2
-    ];
-
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-    gl.uniform4f(colorUniformLocation, color[0], color[1], color[2], color[3]);
-    gl.uniform1f(rotationUniformLocation, 0);
-    gl.uniform2f(translationUniformLocation, 0, 0);
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
+function drawStars(stars) {
+    const starVertices = new Float32Array(stars.length * 12);
+    stars.forEach((star, index) => {
+        const offset = index * 12;
+        starVertices.set([
+            star.x, star.y,
+            star.x + 2, star.y,
+            star.x, star.y + 2,
+            star.x, star.y + 2,
+            star.x + 2, star.y,
+            star.x + 2, star.y + 2
+        ], offset);
+    });
+    gl.bufferData(gl.ARRAY_BUFFER, starVertices, gl.STATIC_DRAW);
+    gl.uniform4f(colorUniformLocation, 1, 1, 1, 1); // Couleur blanche pour les étoiles
+    gl.drawArrays(gl.TRIANGLES, 0, stars.length * 6);
 }
 
 function updateScore() {
-    document.getElementById('score').textContent = `Score: ${score}`;
+    const scoreElement = document.getElementById('score');
+    if (scoreElement.textContent !== `Score: ${score}`) {
+        scoreElement.textContent = `Score: ${score}`;
+    }
 }
 
 function drawExplosion(x, y, radius, color, progress) {
@@ -303,6 +306,26 @@ function displayScoreGain(scoreGain) {
     }, 1000);
 }
 
+function displayLifeGain(lifeGain) {
+    const lifeElement = document.createElement('div');
+    lifeElement.textContent = `+${lifeGain}`;
+    lifeElement.style.position = 'absolute';
+    lifeElement.style.color = 'red';
+    lifeElement.style.fontSize = '2.5em';
+    lifeElement.style.left = `${50 + (Math.random() - 0.5) * 5}%`;
+    lifeElement.style.top = `${50+ (Math.random() - 0.5) * 10}%`;
+    lifeElement.style.transition = 'opacity 1s ease-out';
+    lifeElement.style.opacity = '1';
+    document.body.appendChild(lifeElement);
+
+    setTimeout(() => {
+        lifeElement.style.opacity = '0';
+        setTimeout(() => {
+            document.body.removeChild(lifeElement);
+        }, 1000);
+    }, 1000);
+}
+
 function displayGameOver() {
     if (endGame) return;
     const gameOverText = document.createElement('div');
@@ -320,18 +343,38 @@ function displayGameOver() {
     endGame = true;
 }
 
-let niveau = 1;
 
 function updateDifficulty() {
     const bulletSpeedIncrease = 1.5 * niveau;
     const asteroidSpawnRate = 0.02 + 0.005 * niveau;
-    const badAsteroidChance = 0.07 + 0.005 * niveau;
+    return { bulletSpeedIncrease, asteroidSpawnRate };
+}
 
-    return { bulletSpeedIncrease, asteroidSpawnRate, badAsteroidChance };
+function displayLevelUpMessage(niveau) {
+    const levelUpMessage = document.createElement('div');
+    levelUpMessage.textContent = `Niveau ${niveau}`;
+    levelUpMessage.style.position = 'absolute';
+    levelUpMessage.style.top = '30%';
+    levelUpMessage.style.left = '50%';
+    levelUpMessage.style.transform = 'translate(-50%, -50%)';
+    levelUpMessage.style.color = 'white';
+    levelUpMessage.style.fontSize = '2em';
+    levelUpMessage.style.fontFamily = 'Press Start 2P, cursive';
+    levelUpMessage.style.transition = 'opacity 1s ease-out';
+    levelUpMessage.style.opacity = '1';
+    document.body.appendChild(levelUpMessage);
+
+    setTimeout(() => {
+        levelUpMessage.style.opacity = '0';
+        setTimeout(() => {
+            document.body.removeChild(levelUpMessage);
+        }, 1000);
+    }, 1000);
 }
 
 function updateNiveau() {
     document.getElementById('niveau').textContent = `Niveau: ${niveau}`;
+    displayLevelUpMessage(niveau);
 }
 function updateScene() {
     if (!endGame) {
@@ -339,14 +382,14 @@ function updateScene() {
 
         // Dessiner les étoiles
         stars.forEach((star) => {
-            star.y += star.speed;
+            star.y += 2 * (niveau);
             if (star.y > canvas.height) {
                 star.y = 0;
                 star.x = Math.random() * canvas.width;
             }
-            drawStar(star.x, star.y, [1, 1, 1, 1]);
-        });
 
+        });
+        drawStars(stars);
         // Dessiner le vaisseau
         drawShip(ship.x, ship.y, ship.radius, ship.angle, [0, 0.6, 0.9, 1]);
 
@@ -399,9 +442,16 @@ function updateScene() {
                     asteroid.hits--;
                     bullets.splice(bulletIndex, 1);
                     if (asteroid.hits <= 0) {
-                        const scoreGain = asteroid.type === 'bad' ? 50 : 10;
+                        const scoreGain = asteroid.score;
                         score += scoreGain;
                         updateScore();
+                        if (asteroid.type === 'heart') {
+                            lives += 1;
+                            displayLifeGain('♥');
+                        }else if (asteroid.type === 'raffale') {
+                            fastBullet = true;
+                            setTimeout(() => fastBullet = false, 10000);
+                        }
                         displayScoreGain(scoreGain);
                         explosions.push({x: asteroid.x, y: asteroid.y, radius: asteroid.radius, color: asteroid.color, progress: 0});
                         asteroids.splice(index, 1);
@@ -459,23 +509,18 @@ function updateScene() {
             };
             bullets.push(bullet);
             ship.canShoot = false;
-            setTimeout(() => ship.canShoot = true, 200-bulletSpeedIncrease);
+            if (fastBullet){
+                setTimeout(() => ship.canShoot = true, 10);
+            }else{
+                setTimeout(() => ship.canShoot = true, 200-bulletSpeedIncrease);
+            }
         }
 
         // Ajouter des astéroïdes
-        const { asteroidSpawnRate, badAsteroidChance } = updateDifficulty();
+        const { asteroidSpawnRate } = updateDifficulty();
         if (Math.random() < asteroidSpawnRate) {
             const speed = 1 + Math.random() * 2;
-            const isBadAsteroid = Math.random() < badAsteroidChance;
-            const asteroid = {
-                x: Math.random() < 0.5 ? 0 : canvas.width,
-                y: Math.random() * canvas.height,
-                radius: 20 + Math.random() * 30,
-                type: isBadAsteroid ? 'bad' : 'good',
-                color: isBadAsteroid ? [0.560784314, 0.125490196, 0.094117647, 1] : getRandomColor(),
-                hits: isBadAsteroid ? 3 : 1, // 3 balles pour tuer l'astéroïde difficile
-                particles: [] // Initialiser les particules
-            };
+            const asteroid = chooseTypeAsteroid();
 
             const angle = Math.atan2(ship.y - asteroid.y, ship.x - asteroid.x);
             asteroid.dx = speed * Math.cos(angle);
@@ -488,9 +533,11 @@ function updateScene() {
             drawHeart(20 + i * 40, 20, 5, [1, 0, 0, 1]);
         }
 
-        // Changer de niveau
-        if (score >= niveau * 500) {
+        const paliersNiveaux = [500, 1500, 3000, 5000, 7500, 10500, 14000, 18000, 22500, 27500, 33000, 39000, 45500, 52500, 60000];
+        if (score >= paliersNiveaux[niveau - 1]) {
             niveau++;
+            lives++;
+            displayLifeGain('♥');
             updateNiveau();
         }
     }
@@ -499,6 +546,57 @@ function updateScene() {
         displayGameOver();
     }
     requestAnimationFrame(updateScene);
+}
+
+function chooseTypeAsteroid() {
+    const random = Math.random();
+    let asteroid = {
+        x: Math.random() < 0.5 ? 0 : canvas.width,
+        y: Math.random() * canvas.height,
+        radius: 20 + Math.random() * 30,
+        type: 'null',
+        color: [1,1,1,1],
+        hits: 0,
+        score: 0,
+        particles: []
+    };
+    if (random < 0.95) {
+        asteroid.type = 'classic';
+        asteroid.color = getRandomColor();
+        asteroid.hits = 1;
+        asteroid.score = 10;
+        return asteroid;
+    }else if (random < 0.98) {
+        asteroid.type = 'bad';
+        asteroid.color = [0.560784314, 0.125490196, 0.094117647, 1];
+        asteroid.hits = 3;
+        asteroid.score = 30;
+        return asteroid;
+    } else if (random < 0.985) {
+        asteroid.type = 'good';
+        asteroid.color = [0.196078431, 0.803921569, 0.196078431, 1];
+        asteroid.hits = 2;
+        asteroid.score = 20;
+        return asteroid;
+    } else if (random < 0.99) {
+        asteroid.type = 'raffale';
+        asteroid.color = [0.8, 0.8, 0.2, 1];
+        asteroid.hits = 3;
+        asteroid.score = 0;
+        return asteroid;
+    } else if (random < 0.995) {
+            asteroid.type = 'heart';
+            asteroid.color = [0, 1, 0, 1];
+            asteroid.hits = 3;
+            asteroid.score = 0;
+            return asteroid;
+    }else {
+            asteroid.type = 'ultime';
+            asteroid.color = [0, 0, 0.5, 1];
+            asteroid.hits = 8;
+            asteroid.score = 100;
+            return asteroid;
+        }
 }
 
 document.addEventListener('keydown', (e) => {
@@ -522,4 +620,36 @@ canvas.addEventListener('mousemove', (e) => {
 });
 
 gl.clearColor(0, 0, 0, 1);
-updateScene();
+
+
+function displayWelcomeScreen() {
+    const welcomeScreen = document.createElement('div');
+    welcomeScreen.id = 'welcome-screen';
+    welcomeScreen.style.position = 'absolute';
+    welcomeScreen.style.top = '50%';
+    welcomeScreen.style.left = '50%';
+    welcomeScreen.style.transform = 'translate(-50%, -50%)';
+    welcomeScreen.style.color = 'white';
+    welcomeScreen.style.fontSize = '2em';
+    welcomeScreen.style.textAlign = 'center';
+    welcomeScreen.style.padding = '20px';
+    welcomeScreen.style.border = '2px solid white';
+    welcomeScreen.style.borderRadius = '10px';
+    welcomeScreen.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+    welcomeScreen.innerHTML = `<p>Bienvenue</p><p>Appuyez sur <strong>\u23CE</strong> pour démarrer</p>`;
+    document.body.appendChild(welcomeScreen);
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            document.body.removeChild(welcomeScreen);
+            startGame();
+        }
+    });
+}
+
+function startGame() {
+    updateScene();
+}
+
+displayWelcomeScreen();
+
