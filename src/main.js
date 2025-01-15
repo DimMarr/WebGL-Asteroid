@@ -346,7 +346,7 @@ function displayGameOver() {
 
 function updateDifficulty() {
     const bulletSpeedIncrease = 1.5 * niveau;
-    const asteroidSpawnRate = 0.02 + 0.005 * niveau;
+    const asteroidSpawnRate = 0.015 + 0.005 * niveau;
     return { bulletSpeedIncrease, asteroidSpawnRate };
 }
 
@@ -509,17 +509,17 @@ function updateScene() {
             };
             bullets.push(bullet);
             ship.canShoot = false;
-            if (fastBullet){
-                setTimeout(() => ship.canShoot = true, 10);
-            }else{
-                setTimeout(() => ship.canShoot = true, 200-bulletSpeedIncrease);
+            if (fastBullet) {
+                setTimeout(() => ship.canShoot = true, 25);
+            } else {
+                setTimeout(() => ship.canShoot = true, 200 - bulletSpeedIncrease);
             }
         }
 
         // Ajouter des astéroïdes
         const { asteroidSpawnRate } = updateDifficulty();
         if (Math.random() < asteroidSpawnRate) {
-            const speed = 1 + Math.random() * 2;
+            const speed = Math.sqrt(niveau) + Math.random() * 2;
             const asteroid = chooseTypeAsteroid();
 
             const angle = Math.atan2(ship.y - asteroid.y, ship.x - asteroid.x);
@@ -528,7 +528,7 @@ function updateScene() {
             asteroids.push(asteroid);
         }
 
-        // Dessiner les cœurs
+        // Dessiner les coeurs
         for (let i = 0; i < lives; i++) {
             drawHeart(20 + i * 40, 20, 5, [1, 0, 0, 1]);
         }
@@ -560,31 +560,31 @@ function chooseTypeAsteroid() {
         score: 0,
         particles: []
     };
-    if (random < 0.95) {
+    if (random < 0.95 - (niveau * 0.005)) {
         asteroid.type = 'classic';
         asteroid.color = getRandomColor();
         asteroid.hits = 1;
         asteroid.score = 10;
         return asteroid;
-    }else if (random < 0.98) {
+    }else if (random < 0.98 - (niveau * 0.005)) {
         asteroid.type = 'bad';
         asteroid.color = [0.560784314, 0.125490196, 0.094117647, 1];
         asteroid.hits = 3;
         asteroid.score = 30;
         return asteroid;
-    } else if (random < 0.985) {
+    } else if (random < 0.985 - (niveau * 0.002)) {
         asteroid.type = 'good';
         asteroid.color = [0.196078431, 0.803921569, 0.196078431, 1];
         asteroid.hits = 2;
         asteroid.score = 20;
         return asteroid;
-    } else if (random < 0.99) {
+    } else if (random < 0.99 - (niveau * 0.001) ) {
         asteroid.type = 'raffale';
         asteroid.color = [0.8, 0.8, 0.2, 1];
         asteroid.hits = 3;
         asteroid.score = 0;
         return asteroid;
-    } else if (random < 0.995) {
+    } else if (random < 0.995 - (niveau * 0.001)) {
             asteroid.type = 'heart';
             asteroid.color = [0, 1, 0, 1];
             asteroid.hits = 3;
@@ -593,7 +593,7 @@ function chooseTypeAsteroid() {
     }else {
             asteroid.type = 'ultime';
             asteroid.color = [0, 0, 0.5, 1];
-            asteroid.hits = 8;
+            asteroid.hits = 5;
             asteroid.score = 100;
             return asteroid;
         }
