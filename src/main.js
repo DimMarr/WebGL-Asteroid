@@ -5,7 +5,6 @@ if (!gl) {
     alert('WebGL non pris en charge, veuillez utiliser un navigateur compatible.');
 }
 
-// Vertex shader
 const vertexShaderSource = `
     attribute vec2 a_position;
     uniform vec2 u_resolution;
@@ -24,7 +23,6 @@ const vertexShaderSource = `
     }
 `;
 
-// Fragment shader
 const fragmentShaderSource = `
     precision mediump float;
     uniform vec4 u_color;
